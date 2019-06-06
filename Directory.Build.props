@@ -1,0 +1,13 @@
+<Project>
+  <!-- User should define location of JDK -->
+  <PropertyGroup>
+    <JDKRoot>C:\Program Files\Java\Current</JDKRoot>
+  </PropertyGroup>
+
+  <!-- Shared properties -->
+  <PropertyGroup>
+    <SourceRoot>$(MSBuildThisFileDirectory)src</SourceRoot>
+    <BinRoot>$(MSBuildThisFileDirectory)bin</BinRoot>
+    <GeneratedInc>$(BinRoot)/inc</GeneratedInc>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,9 @@
+# Build results
+**/bin/
+**/obj/
+**/nbin/
+**/nobj/
+**/DoNotUse/
+
+# Visual Studio Code
+.vscode/

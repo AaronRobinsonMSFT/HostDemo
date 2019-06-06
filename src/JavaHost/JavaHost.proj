@@ -1,0 +1,84 @@
+<Project InitialTargets="Build">
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Directory.Build.props))/Directory.Build.props" />
+
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <JavaSource Include="*.java" />
+  </ItemGroup>
+
+  <Target Name="SetupForDemo"
+          AfterTargets="Build">
+
+    <ItemGroup>
+      <AllOutputs Include="$(OutputDir)/$(MSBuildProjectName).*" />
+    </ItemGroup>
+
+    <!-- Copy the project outputs to the demo directory -->
+    <Copy SourceFiles="@(AllOutputs)"
+          DestinationFolder="$(BinRoot)/$(Configuration)" />
+  </Target>
+
+  <!-- Java build properties and targets -->
+
+  <PropertyGroup>
+    <OutputExtension>.class</OutputExtension>
+    <OutputNameNoExt>$(MSBuildProjectName)</OutputNameNoExt>
+    <OutputName>$(OutputNameNoExt)$(OutputExtension)</OutputName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IntermediateBaseDir>$(MSBuildProjectDirectory)/obj</IntermediateBaseDir>
+    <IntermediateDir>$(IntermediateBaseDir)</IntermediateDir>
+    <OutputBaseDir>$(MSBuildProjectDirectory)/bin</OutputBaseDir>
+    <OutputDir>$(OutputBaseDir)/$(Configuration)</OutputDir>
+    <TargetPath>$(OutputDir)/$(OutputName)</TargetPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <JavaCompiler>$(JDKRoot)/bin/javac</JavaCompiler>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClassPath Include="$(MSBuildProjectDirectory)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ClassPathArgs>-classpath &quot;@(ClassPath, '&quot; -classpath &quot;')&quot;</ClassPathArgs>
+    <JavaCompilerArguments Condition="'$(Configuration)'=='Debug'">-g -d &quot;$(OutputDir)&quot; -h &quot;$(GeneratedInc)&quot; $(ClassPathArgs)</JavaCompilerArguments>
+    <JavaCompilerArguments Condition="'$(Configuration)'=='Release'">-g -d &quot;$(OutputDir)&quot; -h &quot;$(GeneratedInc)&quot; $(ClassPathArgs)</JavaCompilerArguments>
+  </PropertyGroup>
+
+  <Target Name="Build"
+          Inputs="@(JavaSource)"
+          Outputs="$(TargetPath)">
+
+        <Error Condition="'$(JDKRoot)' == ''" Text="JDK path must be set" />
+
+        <MakeDir Directories="$(GeneratedInc);$(IntermediateDir);$(OutputDir)" />
+
+        <Exec Command="&quot;$(JavaCompiler)&quot; $(JavaCompilerArguments) &quot;@(JavaSource, '&quot; &quot;')&quot;"
+            Outputs="$(TargetPath)"
+            ConsoleToMsBuild="true" />
+
+        <Message Text="$(MSBuildProjectName) -> $(TargetPath)" Importance="high" />
+  </Target>
+
+  <Target Name="Clean">
+    <RemoveDir Directories="$(IntermediateDir);$(OutputDir)" />
+  </Target>
+
+  <Target Name="Rebuild"
+          DependsOnTargets="Clean;Build">
+  </Target>
+
+  <Target Name="GetTargetPath"
+          Returns="@(Outputs)">
+    <ItemGroup>
+      <Outputs Include="$(TargetPath)" />
+    </ItemGroup>
+  </Target>
+</Project>

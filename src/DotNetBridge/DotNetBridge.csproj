@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+
+    <!-- Move the managed outputs of the project into a special directory -->
+    <OutputPath>DoNotUse/$(Configuration)</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Project reference to the JavaHost.
+         Project reference is used to ensure the generated header
+         files are created prior to native bridge build
+    -->
+    <ProjectReference Include="$(SourceRoot)/JavaHost/JavaHost.proj" />
+  </ItemGroup>
+
+  <!-- Properties for the native project -->
+  <PropertyGroup>
+    <NativeSource>$(MSBuildThisFileDirectory).</NativeSource>
+    <NativeBuildDir>$(MSBuildThisFileDirectory)nobj/$(Configuration)</NativeBuildDir>
+    <NativeBinDir>$(MSBuildThisFileDirectory)nbin</NativeBinDir>
+    <JavaInclude>$(JDKRoot)/include</JavaInclude>
+  </PropertyGroup>
+
+  <!-- Target to build the native project -->
+  <Target Name="BuildNativeProject"
+          AfterTargets="Build">
+    <PropertyGroup>
+      <NativeArch>x64</NativeArch>
+      <NetHostDir>$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Host.$(NETCoreSdkRuntimeIdentifier)/$(BundledNETCoreAppPackageVersion)/runtimes/$(NETCoreSdkRuntimeIdentifier)/native</NetHostDir>
+    </PropertyGroup>
+
+    <Error Condition="'$(JDKRoot)' == ''" Text="JDK path must be set" />
+
+    <!-- Generate the native projects -->
+    <Exec Command="cmake -D CMAKE_INSTALL_PREFIX=&quot;$(NativeBinDir)&quot; -D GENERATED_INC=&quot;$(GeneratedInc)&quot; -D NETHOST_DIR=&quot;$(NetHostDir)&quot; -D JDK_INC=&quot;$(JavaInclude)&quot; -A $(NativeArch) -S &quot;$(NativeSource)&quot; -B &quot;$(NativeBuildDir)&quot;"
+          ConsoleToMsBuild="true" />
+
+    <!-- Build and install the native projects -->
+    <Exec Command="cmake --build &quot;$(NativeBuildDir)&quot; --config $(Configuration) --target INSTALL"
+          Outputs="$(NativeBinDir)/$(Configuration)/$(NativeArch)/*"
+          ConsoleToMsBuild="true" />
+
+    <ItemGroup>
+      <NativeOutputs Include="$(NativeBinDir)/$(Configuration)/$(NativeArch)/$(MSBuildProjectName).*" />
+      <NativeOutputs Include="$(NetHostDir)/nethost.dll" />
+    </ItemGroup>
+
+    <!-- Copy the native project outputs to the demo directory -->
+    <Copy SourceFiles="@(NativeOutputs)"
+          DestinationFolder="$(BinRoot)/$(Configuration)"
+          SkipUnchangedFiles="True" />
+  </Target>
+
+  <!-- Target to clean native project outputs -->
+  <Target Name="CleanNativeProject"
+          AfterTargets="Clean">
+    <RemoveDir Directories="$(NativeBinDir)" />
+  </Target>
+
+</Project>

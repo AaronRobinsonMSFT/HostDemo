@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.Build.Traversal">
+
+  <ItemGroup>
+    <ProjectReference Include="src/JavaHost/*.proj" />
+    <ProjectReference Include="src/DotNetBridge/*.csproj" />
+    <ProjectReference Include="src/DotNetLib/*.csproj" />
+  </ItemGroup>
+
+</Project>
