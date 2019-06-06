@@ -1,7 +1,8 @@
 <Project>
   <!-- User should define location of JDK -->
   <PropertyGroup>
-    <JDKRoot>C:\Program Files\Java\Current</JDKRoot>
+    <!-- The root of a JDK install should contain `bin/` and `inc/` directories -->
+    <JDKRoot></JDKRoot>
   </PropertyGroup>
 
   <!-- Shared properties -->
