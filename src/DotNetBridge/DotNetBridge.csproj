@@ -29,22 +29,33 @@
     <PropertyGroup>
       <NativeArch>x64</NativeArch>
       <NetHostDir>$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Host.$(NETCoreSdkRuntimeIdentifier)/$(BundledNETCoreAppPackageVersion)/runtimes/$(NETCoreSdkRuntimeIdentifier)/native</NetHostDir>
+
+      <NetHostName Condition="'$(OS)'=='Windows_NT'">nethost.dll</NetHostName>
+      <NetHostName Condition="'$(OS)'=='Unix'">libnethost.so</NetHostName>
+
+      <CMakeDefines>-D CMAKE_INSTALL_PREFIX=&quot;$(NativeBinDir)&quot; -D GENERATED_INC=&quot;$(GeneratedInc)&quot; -D NETHOST_DIR=&quot;$(NetHostDir)&quot; -D JDK_INC=&quot;$(JavaInclude)&quot;</CMakeDefines>
+      <CMakeDefines Condition="'$(OS)'=='Unix'">$(CMakeDefines) -D NATIVE_ARCH=$(NativeArch) -D CMAKE_BUILD_TYPE=$(Configuration)</CMakeDefines>
+
+      <CMakeGenerateArgs>$(CMakeDefines) -S &quot;$(NativeSource)&quot; -B&quot;$(NativeBuildDir)&quot;</CMakeGenerateArgs>
+      <CMakeGenerateArgs Condition="'$(OS)'!='Unix'">-A $(NativeArch) $(CMakeGenerateArgs)</CMakeGenerateArgs>
     </PropertyGroup>
 
     <Error Condition="'$(JDKRoot)' == ''" Text="JDK path must be set" />
 
+    <MakeDir Directories="$(NativeBuildDir)" />
+
     <!-- Generate the native projects -->
-    <Exec Command="cmake -D CMAKE_INSTALL_PREFIX=&quot;$(NativeBinDir)&quot; -D GENERATED_INC=&quot;$(GeneratedInc)&quot; -D NETHOST_DIR=&quot;$(NetHostDir)&quot; -D JDK_INC=&quot;$(JavaInclude)&quot; -A $(NativeArch) -S &quot;$(NativeSource)&quot; -B &quot;$(NativeBuildDir)&quot;"
+    <Exec Command="cmake $(CMakeGenerateArgs)"
           ConsoleToMsBuild="true" />
 
     <!-- Build and install the native projects -->
-    <Exec Command="cmake --build &quot;$(NativeBuildDir)&quot; --config $(Configuration) --target INSTALL"
+    <Exec Command="cmake --build &quot;$(NativeBuildDir)&quot; --config $(Configuration) --target install"
           Outputs="$(NativeBinDir)/$(Configuration)/$(NativeArch)/*"
           ConsoleToMsBuild="true" />
 
     <ItemGroup>
-      <NativeOutputs Include="$(NativeBinDir)/$(Configuration)/$(NativeArch)/$(MSBuildProjectName).*" />
-      <NativeOutputs Include="$(NetHostDir)/nethost.dll" />
+      <NativeOutputs Include="$(NativeBinDir)/$(Configuration)/$(NativeArch)/*$(MSBuildProjectName.ToLower()).*" />
+      <NativeOutputs Include="$(NetHostDir)/$(NetHostName)" />
     </ItemGroup>
 
     <!-- Copy the native project outputs to the demo directory -->

@@ -12,6 +12,12 @@ include_directories(${JDK_INC})
 if (WIN32)
     add_compile_definitions(WINDOWS)
     include_directories(${JDK_INC}/win32)
+    set(TARGET_DIRECTORY $<CONFIG>/${CMAKE_GENERATOR_PLATFORM})
+elseif (APPLE)
+elseif (UNIX)
+    include_directories(${JDK_INC}/linux)
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+    set(TARGET_DIRECTORY $<CONFIG>/${CMAKE_GENERATOR_PLATFORM}/${NATIVE_ARCH})
 endif()
 
 # Add paths to the nethost directory
@@ -23,5 +29,7 @@ add_library(dotnetbridge SHARED dotnetbridge.c)
 # Link against the nethost library
 target_link_libraries(dotnetbridge nethost)
 
-install(TARGETS dotnetbridge DESTINATION $<CONFIG>/${CMAKE_GENERATOR_PLATFORM})
-install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION $<CONFIG>/${CMAKE_GENERATOR_PLATFORM} OPTIONAL)
+install(TARGETS dotnetbridge DESTINATION ${TARGET_DIRECTORY})
+if (WIN32)
+    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${TARGET_DIRECTORY} OPTIONAL)
+endif()

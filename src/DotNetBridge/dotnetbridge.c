@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 // Provided by the AppHost NuGet package
@@ -24,7 +26,7 @@
 // Globals to hold hostfxr exports
 hostfxr_initialize_for_runtime_config_fn init;
 hostfxr_get_runtime_delegate_fn get_del;
-hostfxr_close_fn close;
+hostfxr_close_fn close_fn;
 
 // Function pointers returned from hostfxr
 // These functions are defined in https://github.com/dotnet/core-setup
@@ -109,7 +111,7 @@ static void *get_export(void *, const char *);
     #include <dlfcn.h>
     static void *load_library(const char_t *path)
     {
-        void *h = dlopen(path, RTLD_LOCAL);
+        void *h = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
         assert(h != NULL);
         return h;
     }
@@ -138,9 +140,9 @@ static bool load_hostfxr(void)
     void *lib = load_library(buffer);
     init = (hostfxr_initialize_for_runtime_config_fn)get_export(lib, "hostfxr_initialize_for_runtime_config");
     get_del = (hostfxr_get_runtime_delegate_fn)get_export(lib, "hostfxr_get_runtime_delegate");
-    close = (hostfxr_close_fn)get_export(lib, "hostfxr_close");
+    close_fn = (hostfxr_close_fn)get_export(lib, "hostfxr_close");
 
-    return (init && get_del && close);
+    return (init && get_del && close_fn);
 }
 
 // Find the last character in the supplied string
@@ -186,7 +188,7 @@ static load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(const 
     }
 
 done:
-    close(cxt);
+    close_fn(cxt);
     free(cfg_path);
     return (load_assembly_and_get_function_pointer_fn)load_and_get;
 }
