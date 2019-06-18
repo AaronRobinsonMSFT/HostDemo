@@ -17,9 +17,7 @@
 
   <!-- Properties for the native project -->
   <PropertyGroup>
-    <NativeSource>$(MSBuildThisFileDirectory).</NativeSource>
-    <NativeBuildDir>$(MSBuildThisFileDirectory)nobj/$(Configuration)</NativeBuildDir>
-    <NativeBinDir>$(MSBuildThisFileDirectory)nbin</NativeBinDir>
+    <NativeBinDir>$(BinRoot)/$(Configuration)</NativeBinDir>
     <JavaInclude>$(JDKRoot)/include</JavaInclude>
   </PropertyGroup>
 
@@ -27,39 +25,29 @@
   <Target Name="BuildNativeProject"
           AfterTargets="Build">
     <PropertyGroup>
-      <NativeArch>x64</NativeArch>
       <NetHostDir>$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Host.$(NETCoreSdkRuntimeIdentifier)/$(BundledNETCoreAppPackageVersion)/runtimes/$(NETCoreSdkRuntimeIdentifier)/native</NetHostDir>
 
-      <NetHostName Condition="'$(OS)'=='Windows_NT'">nethost.dll</NetHostName>
-      <NetHostName Condition="'$(OS)'=='Unix'">libnethost.so</NetHostName>
-
-      <CMakeDefines>-D CMAKE_INSTALL_PREFIX=&quot;$(NativeBinDir)&quot; -D GENERATED_INC=&quot;$(GeneratedInc)&quot; -D NETHOST_DIR=&quot;$(NetHostDir)&quot; -D JDK_INC=&quot;$(JavaInclude)&quot;</CMakeDefines>
-      <CMakeDefines Condition="'$(OS)'=='Unix'">$(CMakeDefines) -D NATIVE_ARCH=$(NativeArch) -D CMAKE_BUILD_TYPE=$(Configuration)</CMakeDefines>
-
-      <CMakeGenerateArgs>$(CMakeDefines) -S &quot;$(NativeSource)&quot; -B&quot;$(NativeBuildDir)&quot;</CMakeGenerateArgs>
-      <CMakeGenerateArgs Condition="'$(OS)'!='Unix'">-A $(NativeArch) $(CMakeGenerateArgs)</CMakeGenerateArgs>
+      <NetHostName Condition="$([MSBuild]::IsOsPlatform('Windows'))">nethost.dll</NetHostName>
+      <NetHostName Condition="$([MSBuild]::IsOsPlatform('Linux'))">libnethost.so</NetHostName>
+      <NetHostName Condition="$([MSBuild]::IsOsPlatform('OSX'))">libnethost.dylib</NetHostName>
     </PropertyGroup>
 
     <Error Condition="'$(JDKRoot)' == ''" Text="JDK path must be set" />
 
-    <MakeDir Directories="$(NativeBuildDir)" />
+    <Exec Command="gcc -shared dotnetbridge.c -fpic -I&quot;$(NetHostDir)&quot; -Iinc -I&quot;$(GeneratedInc)&quot; -I&quot;$(JavaInclude)&quot; -I&quot;$(JavaInclude)/linux&quot; -D LINUX -o &quot;$(NativeBinDir)/dotnetbridge&quot; -ldl -lnethost -L&quot;$(NetHostDir)&quot; -Wl,-rpath,'$ORIGIN',--disable-new-dtags"
+          ConsoleToMsBuild="true"
+          Condition="$([MSBuild]::IsOsPlatform('Linux'))" />
 
-    <!-- Generate the native projects -->
-    <Exec Command="cmake $(CMakeGenerateArgs)"
-          ConsoleToMsBuild="true" />
+    <Exec Command="gcc -shared dotnetbridge.c -fpic -I&quot;$(NetHostDir)&quot; -Iinc -I&quot;$(GeneratedInc)&quot; -I&quot;$(JavaInclude)&quot; -I&quot;$(JavaInclude)/osx&quot; -D OSX -o &quot;$(NativeBinDir)/dotnetbridge&quot; -ldl -lnethost -L&quot;$(NetHostDir)&quot; -Wl,-rpath,'@loader_path'"
+          ConsoleToMsBuild="true"
+          Condition="$([MSBuild]::IsOsPlatform('OSX'))" />
 
-    <!-- Build and install the native projects -->
-    <Exec Command="cmake --build &quot;$(NativeBuildDir)&quot; --config $(Configuration) --target install"
-          Outputs="$(NativeBinDir)/$(Configuration)/$(NativeArch)/*"
-          ConsoleToMsBuild="true" />
+    <Exec Command="cl.exe /LD dotnetbridge.c /I &quot;$(NetHostDir)&quot; /I inc /I &quot;$(GeneratedInc)&quot; /I &quot;$(JavaInclude)&quot; /I &quot;$(JavaInclude)\win32&quot; /D WINDOWS /EHsc /Od /GS /sdl /Zi /Fo&quot;$(NativeBinDir)\\&quot; /Fd&quot;$(NativeBinDir)\dotnetbridge.pdb&quot; /link &quot;$(NetHostDir)/nethost.lib&quot; /implib:&quot;$(NativeBinDir)\dotnetbridge.lib&quot; /out:&quot;$(NativeBinDir)\dotnetbridge.dll&quot;"
+          ConsoleToMsBuild="true"
+          Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
 
-    <ItemGroup>
-      <NativeOutputs Include="$(NativeBinDir)/$(Configuration)/$(NativeArch)/*$(MSBuildProjectName.ToLower()).*" />
-      <NativeOutputs Include="$(NetHostDir)/$(NetHostName)" />
-    </ItemGroup>
-
-    <!-- Copy the native project outputs to the demo directory -->
-    <Copy SourceFiles="@(NativeOutputs)"
+    <!-- Copy the nethost library to the demo directory -->
+    <Copy SourceFiles="$(NetHostDir)/$(NetHostName)"
           DestinationFolder="$(BinRoot)/$(Configuration)"
           SkipUnchangedFiles="True" />
   </Target>
